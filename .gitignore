@@ -135,6 +135,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+clms_project_env/
 
 # Spyder project settings
 .spyderproject
@@ -171,3 +172,4 @@ cython_debug/
 .pypirc
 
 .DS_Store
+data/
