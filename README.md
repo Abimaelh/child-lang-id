@@ -16,4 +16,6 @@ After obtaining baseline accuracy scores, we fine-tune these models using child 
 3. Evaluation: Compare the fine-tuned models' accuracy to the baseline results. Test the fine-tuned model on the [**Madrid Corpus**](https://ilabs.uw.edu/sites/default/files/2020_ferjanramirez_kuhl_earlysecondlanguage.pdf).
 
 ## Current Status
-Fine-tuning in progress
+Fine-tuning in progress...
+
+Currently working on data augmentation and extracting segments for the OGI Kids' Speech Corpus.
