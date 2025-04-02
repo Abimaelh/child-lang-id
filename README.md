@@ -16,6 +16,10 @@ After obtaining baseline accuracy scores, we fine-tune these models using child 
 3. Evaluation: Compare the fine-tuned models' accuracy to the baseline results. Test the fine-tuned model on the [**Madrid Corpus**](https://ilabs.uw.edu/sites/default/files/2020_ferjanramirez_kuhl_earlysecondlanguage.pdf).
 
 ## Current Status
-Fine-tuning in progress...
-
 Currently working on data augmentation and extracting segments for the OGI Kids' Speech Corpus.
+
+Data Augmentation:
+Implementing changes to the speed and pitch perturbation of child speech. Following Shahnawazuddin et al. (2020) has been shown to lead to improvements in WER in large vocabulary speech recognition tasks.
+
+Hyperparameters:
+Prasad et. al. (2024) added a linear layer with orthonormal constraints to ECAPA and used a learning rate of 3e-05 and a batch size of 8. These parameters apply to the present project because both studies work with limited datasets.
