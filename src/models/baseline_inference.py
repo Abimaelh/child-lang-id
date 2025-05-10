@@ -8,7 +8,7 @@ from scipy.stats import chi2_contingency
 MODEL_DIR = "/home2/abimaelh/child-lang-id/MODEL_DIR"
 DATA_DIR = "/home2/abimaelh/child-lang-id/DATA_DIR"
 OUTPUT_DIR = "/home2/abimaelh/child-lang-id/OUTPUT_DIR"
-METADATA_PATH = "/home2/abimaelh/child-lang-id/METADATA_DIR/shiro_metadata.xlsx"
+METADATA_PATH = "/home2/abimaelh/child-lang-id/metadata/shiro_metadata.xlsx"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
