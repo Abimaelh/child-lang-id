@@ -173,3 +173,11 @@ cython_debug/
 
 .DS_Store
 data/
+
+# Outputs and logs
+outputs/
+logs/
+
+# Metadata files
+metadata/*.xlsx
+
