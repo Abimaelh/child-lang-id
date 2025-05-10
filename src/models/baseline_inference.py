@@ -3,8 +3,9 @@ import torchaudio
 from speechbrain.inference.classifiers import EncoderClassifier
 from collections import Counter
 
-DATA_DIR = os.environ.get("DATA_DIR", "/gscratch/stf/abimaelh/Shiro_Corpus_Segments")
-MODEL_DIR = os.environ.get("MODEL_DIR", "/gscratch/stf/abimaelh/speechbrain_models")
+MODEL_DIR = "/home2/abimaelh/child-lang-id/MODEL_DIR"
+DATA_DIR = "/home2/abimaelh/child-lang-id/DATA_DIR"
+OUTPUT_DIR = "/home2/abimaelh/child-lang-id/OUTPUT_DIR"
 
 language_id = EncoderClassifier.from_hparams(
     source="speechbrain/lang-id-voxlingua107-ecapa",
