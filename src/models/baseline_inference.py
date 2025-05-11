@@ -20,7 +20,7 @@ language_id = EncoderClassifier.from_hparams(
 )
 
 metadata_df = pd.read_excel(METADATA_PATH)
-metadata_df.columns = metadata_df.columns.str.strip().str.lower()  
+metadata_df.columns = metadata_df.columns.str.strip().str.lower() 
 metadata_df["filename"] = metadata_df["filename"].astype(str).str.strip().str.lower()
 
 predictions = []
@@ -33,6 +33,9 @@ if not wav_files:
     raise ValueError("No .wav files found in DATA_DIR. Check the folder structure.")
 
 for file_path in wav_files:
+    if "archive" in file_path.lower():
+        continue
+
     try:
         signal, fs = torchaudio.load(file_path)
         prediction = language_id.classify_file(file_path)
@@ -43,15 +46,16 @@ for file_path in wav_files:
 
     subject_id = Path(file_path).parts[-2]  
     corpus = Path(file_path).parts[-4] if "cslu_segments" in file_path else "shiro"
+    gold_lang = "spanish"
     predictions.append({
         "filename": subject_id,
         "file_path": file_path,
         "predicted_lang": predicted_lang,
-        "true_lang": "Spanish",  # placeholder
+        "true_lang": gold_lang,
         "corpus": corpus
     })
     subject_total_counts[(corpus, subject_id)] += 1
-    if predicted_lang == "Spanish":
+    if predicted_lang.lower() == gold_lang.lower():
         subject_correct_counts[(corpus, subject_id)] += 1
 
 pred_df = pd.DataFrame(predictions)
@@ -95,14 +99,14 @@ for corpus_name in pred_df["corpus"].unique():
         age_counts = corpus_merged.groupby(["age_group", "predicted_lang", "true_lang"]).size().unstack(fill_value=0)
         chi2_age, p_age, _, _ = chi2_contingency(age_counts)
 
-        overall_acc = (corpus_df["predicted_lang"] == corpus_df["true_lang"]).mean()
+        overall_acc = (corpus_df["predicted_lang"].str.lower() == corpus_df["true_lang"].str.lower()).mean()
 
         print(f"Overall Accuracy: {overall_acc:.2%}")
         print(f"Mean Per-Subject Accuracy: {mean_acc:.2%} ± {std_acc:.2%}")
         print(f"Chi-square Gender p-value: {p_gender:.4f}")
         print(f"Chi-square Age Group p-value: {p_age:.4f}")
     else:
-        overall_acc = (corpus_df["predicted_lang"] == corpus_df["true_lang"]).mean()
+        overall_acc = (corpus_df["predicted_lang"].str.lower() == corpus_df["true_lang"].str.lower()).mean()
         print(f"Overall Accuracy: {overall_acc:.2%}")
         print(f"Mean Per-Subject Accuracy: {mean_acc:.2%} ± {std_acc:.2%}")
 
