@@ -3,9 +3,9 @@ import torchaudio
 import pandas as pd
 from speechbrain.inference.classifiers import EncoderClassifier
 from collections import defaultdict, Counter
-from scipy.stats import chi2_contingency
 from pathlib import Path
 from glob import glob
+from sklearn.metrics import precision_recall_fscore_support
 
 MODEL_DIR = "/home2/abimaelh/child-lang-id/MODEL_DIR"
 DATA_DIR = "/home2/abimaelh/child-lang-id/DATA_DIR"
@@ -20,7 +20,7 @@ language_id = EncoderClassifier.from_hparams(
 )
 
 metadata_df = pd.read_excel(METADATA_PATH)
-metadata_df.columns = metadata_df.columns.str.strip().str.lower() 
+metadata_df.columns = metadata_df.columns.str.strip().str.lower()
 metadata_df["filename"] = metadata_df["filename"].astype(str).str.strip().str.lower()
 
 predictions = []
@@ -40,22 +40,30 @@ for file_path in wav_files:
         signal, fs = torchaudio.load(file_path)
         prediction = language_id.classify_file(file_path)
         predicted_lang = prediction[3]
+        if isinstance(predicted_lang, list):
+            predicted_lang = predicted_lang[0]
     except Exception as e:
         print(f"Failed to process {file_path}: {e}")
         continue
 
-    subject_id = Path(file_path).parts[-2]  
+    subject_id = Path(file_path).parts[-2] 
     corpus = Path(file_path).parts[-4] if "cslu_segments" in file_path else "shiro"
-    gold_lang = "spanish"
+
+    if corpus == "shiro":
+        true_lang = "spanish"
+    else:  # cslu_segments
+        true_lang = "english"
+
     predictions.append({
         "filename": subject_id,
         "file_path": file_path,
         "predicted_lang": predicted_lang,
-        "true_lang": gold_lang,
+        "true_lang": true_lang,
         "corpus": corpus
     })
     subject_total_counts[(corpus, subject_id)] += 1
-    if predicted_lang.lower() == gold_lang.lower():
+    predicted_lang_clean = predicted_lang.split(":", 1)[-1].strip().lower()
+    if predicted_lang_clean == true_lang.lower():
         subject_correct_counts[(corpus, subject_id)] += 1
 
 pred_df = pd.DataFrame(predictions)
@@ -72,7 +80,21 @@ merged_df = pred_df.merge(metadata_df, on="filename", how="left")
 for corpus_name in pred_df["corpus"].unique():
     corpus_df = pred_df[pred_df["corpus"] == corpus_name]
     print(f"\n=== Results for {corpus_name.upper()} ===")
-    
+
+    subject_correct_counts = defaultdict(int)
+    subject_total_counts = defaultdict(int)
+
+    for index, row in corpus_df.iterrows():
+        subject_id = row["filename"]
+        corpus = row["corpus"]
+        predicted_lang = row["predicted_lang"]
+        true_lang = row["true_lang"]
+
+        subject_total_counts[(corpus, subject_id)] += 1
+        predicted_lang_clean = predicted_lang.split(":", 1)[-1].strip().lower()
+        if predicted_lang_clean == true_lang.lower():
+            subject_correct_counts[(corpus, subject_id)] += 1
+
     corpus_subjects = corpus_df["filename"].unique()
     subject_acc = []
     for subject in corpus_subjects:
@@ -88,26 +110,35 @@ for corpus_name in pred_df["corpus"].unique():
 
     subject_acc_df.to_csv(os.path.join(OUTPUT_DIR, f"per_subject_accuracy_{corpus_name}.csv"), index=False)
 
-    if corpus_name == "shiro":
-        corpus_merged = corpus_df.merge(metadata_df, on="filename", how="left")
+    overall_acc = (corpus_df["predicted_lang"].str.split(":", 1)[-1].str.strip().str.lower() == corpus_df["true_lang"].str.lower()).mean()
+    y_true = corpus_df["true_lang"].str.lower()
+    y_pred = corpus_df["predicted_lang"].str.split(":", 1)[-1].str.strip().str.lower()
+    precision, recall, f1, _ = precision_recall_fscore_support(y_true, y_pred, average="macro", zero_division=0)
 
-        gender_counts = corpus_merged.groupby(["gender", "predicted_lang", "true_lang"]).size().unstack(fill_value=0)
-        chi2_gender, p_gender, _, _ = chi2_contingency(gender_counts)
-
-        median_age = metadata_df["age_in_months"].median()
-        corpus_merged["age_group"] = corpus_merged["age_in_months"].apply(lambda x: "younger" if x <= median_age else "older")
-        age_counts = corpus_merged.groupby(["age_group", "predicted_lang", "true_lang"]).size().unstack(fill_value=0)
-        chi2_age, p_age, _, _ = chi2_contingency(age_counts)
-
-        overall_acc = (corpus_df["predicted_lang"].str.lower() == corpus_df["true_lang"].str.lower()).mean()
-
-        print(f"Overall Accuracy: {overall_acc:.2%}")
-        print(f"Mean Per-Subject Accuracy: {mean_acc:.2%} ± {std_acc:.2%}")
-        print(f"Chi-square Gender p-value: {p_gender:.4f}")
-        print(f"Chi-square Age Group p-value: {p_age:.4f}")
-    else:
-        overall_acc = (corpus_df["predicted_lang"].str.lower() == corpus_df["true_lang"].str.lower()).mean()
-        print(f"Overall Accuracy: {overall_acc:.2%}")
-        print(f"Mean Per-Subject Accuracy: {mean_acc:.2%} ± {std_acc:.2%}")
+    print(f"Overall Accuracy: {overall_acc:.2%}")
+    print(f"Mean Per-Subject Accuracy: {mean_acc:.2%} ± {std_acc:.2%}")
+    print(f"Precision: {precision:.4f}, Recall: {recall:.4f}, F1: {f1:.4f}")
 
 print("\nbaseline_inference.py completed successfully.")
+
+import pandas as pd
+from sklearn.metrics import classification_report
+
+df = pd.read_csv("/home2/abimaelh/child-lang-id/OUTPUT_DIR/predictions.csv")
+
+df["predicted_lang_clean"] = df["predicted_lang"].str.extract(r":\s*(.*)")
+
+y_true = df["true_lang"].str.lower().str.strip()
+y_pred = df["predicted_lang_clean"].str.lower().str.strip()
+
+accuracy = (y_true == y_pred).mean()
+print(f"Accuracy: {accuracy:.4f}")
+
+report = classification_report(y_true, y_pred, zero_division=0)
+print(report)
+
+with open("classification_report.txt", "w") as f:
+    f.write(report)
+
+mismatches = df[y_true != y_pred]
+mismatches.to_csv("mismatched_predictions.csv", index=False)
