@@ -6,6 +6,8 @@ from collections import defaultdict, Counter
 from pathlib import Path
 from glob import glob
 from sklearn.metrics import precision_recall_fscore_support
+import pandas as pd
+from sklearn.metrics import classification_report
 
 MODEL_DIR = "/home2/abimaelh/child-lang-id/MODEL_DIR"
 DATA_DIR = "/home2/abimaelh/child-lang-id/DATA_DIR"
@@ -20,7 +22,7 @@ language_id = EncoderClassifier.from_hparams(
 )
 
 metadata_df = pd.read_excel(METADATA_PATH)
-metadata_df.columns = metadata_df.columns.str.strip().str.lower()
+metadata_df.columns = metadata_df.columns.str.strip().str.lower() 
 metadata_df["filename"] = metadata_df["filename"].astype(str).str.strip().str.lower()
 
 predictions = []
@@ -46,7 +48,7 @@ for file_path in wav_files:
         print(f"Failed to process {file_path}: {e}")
         continue
 
-    subject_id = Path(file_path).parts[-2] 
+    subject_id = Path(file_path).parts[-2]  
     corpus = Path(file_path).parts[-4] if "cslu_segments" in file_path else "shiro"
 
     if corpus == "shiro":
@@ -62,6 +64,7 @@ for file_path in wav_files:
         "corpus": corpus
     })
     subject_total_counts[(corpus, subject_id)] += 1
+
     predicted_lang_clean = predicted_lang.split(":", 1)[-1].strip().lower()
     if predicted_lang_clean == true_lang.lower():
         subject_correct_counts[(corpus, subject_id)] += 1
@@ -91,6 +94,7 @@ for corpus_name in pred_df["corpus"].unique():
         true_lang = row["true_lang"]
 
         subject_total_counts[(corpus, subject_id)] += 1
+
         predicted_lang_clean = predicted_lang.split(":", 1)[-1].strip().lower()
         if predicted_lang_clean == true_lang.lower():
             subject_correct_counts[(corpus, subject_id)] += 1
@@ -110,9 +114,10 @@ for corpus_name in pred_df["corpus"].unique():
 
     subject_acc_df.to_csv(os.path.join(OUTPUT_DIR, f"per_subject_accuracy_{corpus_name}.csv"), index=False)
 
-    overall_acc = (corpus_df["predicted_lang"].str.split(":", 1)[-1].str.strip().str.lower() == corpus_df["true_lang"].str.lower()).mean()
+    corpus_df["predicted_lang_clean"] = corpus_df["predicted_lang"].apply(lambda x: x.split(":", 1)[-1].strip().lower() if isinstance(x, str) else x)
+    overall_acc = (corpus_df["predicted_lang_clean"] == corpus_df["true_lang"].str.lower()).mean()
     y_true = corpus_df["true_lang"].str.lower()
-    y_pred = corpus_df["predicted_lang"].str.split(":", 1)[-1].str.strip().str.lower()
+    y_pred = corpus_df["predicted_lang_clean"]
     precision, recall, f1, _ = precision_recall_fscore_support(y_true, y_pred, average="macro", zero_division=0)
 
     print(f"Overall Accuracy: {overall_acc:.2%}")
@@ -121,8 +126,7 @@ for corpus_name in pred_df["corpus"].unique():
 
 print("\nbaseline_inference.py completed successfully.")
 
-import pandas as pd
-from sklearn.metrics import classification_report
+# export data
 
 df = pd.read_csv("/home2/abimaelh/child-lang-id/OUTPUT_DIR/predictions.csv")
 
