@@ -94,7 +94,7 @@ child-lang-id/
 bash baseline_inference.sh --model_dir speechbrain_models --data_dir cslu_segments --output_dir output_dir
 ```
 
-### Option 2: Run on HTCondor
+### Option 2: Run on Condor
 Edit the `baseline_inference.cmd` file:
 ```text
 arguments = --model_dir speechbrain_models --data_dir cslu_segments --output_dir output_dir
