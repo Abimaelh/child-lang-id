@@ -23,3 +23,119 @@ Implementing changes to the speed and pitch perturbation of child speech. Follow
 
 Hyperparameters:
 Prasad et. al. (2024) added a linear layer with orthonormal constraints to ECAPA and used a learning rate of 3e-05 and a batch size of 8. These parameters apply to the present project because both studies work with limited datasets.
+
+## Setup Instructions
+
+### 1. Clone the Repository on Dryas (or your environment)
+```bash
+git clone https://github.com/your-username/child-lang-id.git
+cd child-lang-id
+```
+
+### 2. Create the Conda Environment (Recommended)
+```bash
+conda env create -f environment.yml
+conda activate langid
+```
+
+> If using pip instead of conda, see `requirements.txt`.
+
+---
+
+## Downloading the Pretrained Model
+
+You must download the SpeechBrain VoxLingua107 ECAPA-TDNN model before running inference. You can do this by running the script below.
+
+### Option 1: Run interactively
+```bash
+python
+```
+```python
+from speechbrain.pretrained import EncoderClassifier
+EncoderClassifier.from_hparams(
+    source="speechbrain/lang-id-voxlingua107-ecapa",
+    savedir="speechbrain_models"
+)
+```
+
+### Option 2: Use a helper script
+Create a file called `download_model.py` and paste:
+```python
+from speechbrain.pretrained import EncoderClassifier
+EncoderClassifier.from_hparams(
+    source="speechbrain/lang-id-voxlingua107-ecapa",
+    savedir="speechbrain_models"
+)
+print("Model downloaded to ./speechbrain_models/")
+```
+Then run:
+```bash
+python download_model.py
+```
+
+---
+
+## Preparing the Audio Data
+
+The audio data (e.g. `cslu_segments`, `shiro_segments`) are available upon request. Once you obtain these files place them in a directory like this:
+
+```
+child-lang-id/
+├── cslu_segments/
+├── shiro_segments/
+├── speechbrain_models/
+```
+---
+
+## Running Inference
+
+### Option 1: Run locally
+```bash
+bash baseline_inference.sh --model_dir speechbrain_models --data_dir cslu_segments --output_dir output_dir
+```
+
+### Option 2: Run on HTCondor
+Edit the `baseline_inference.cmd` file:
+```text
+arguments = --model_dir speechbrain_models --data_dir cslu_segments --output_dir output_dir
+transfer_input_files = baseline_inference.py,baseline_inference.sh,speechbrain_models/,cslu_segments/
+```
+
+Then submit:
+```bash
+condor_submit baseline_inference.cmd
+```
+
+---
+
+## Updating Scripts for Your Environment
+
+Make sure `baseline_inference.sh` uses the Python interpreter from your current environment. This is already handled with:
+
+```bash
+PYTHON_EXEC=$(which python)
+```
+
+So you don’t need to manually update any paths as long as you've activated the `langid` environment.
+
+---
+
+## Input/Output
+
+- **Input**: Audio segments per subject (e.g., WAV files under `cslu_segments/subject/`)
+- **Output**: `predictions.csv`, `per_subject_accuracy.csv`, logs in `logs/`
+
+---
+
+## Notes
+
+- Pretrained model: `speechbrain/lang-id-voxlingua107-ecapa`
+- Python version: `>=3.9` is supported (you can use 3.9.21)
+- Uses `pandas`, `speechbrain`, `scikit-learn`, `torchaudio`
+- Fine-tuning is handled in a separate script
+
+---
+
+## Citation
+
+Coming soon :]
